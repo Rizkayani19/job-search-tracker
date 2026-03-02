@@ -98,16 +98,16 @@
     import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDnbgO6QIUEDNsM7MSpo3qug8FBNlt5weg",
-        authDomain: "job-search-92565.firebaseapp.com",
-        databaseURL: "https://job-search-92565-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "job-search-92565",
-        storageBucket: "job-search-92565.firebasestorage.app",
-        messagingSenderId: "202940543641",
-        appId: "1:202940543641:web:7f8802aa7a08704540be08",
-        measurementId: "G-676RGLS7TW"
-    };
+     const firebaseConfig = {
+  apiKey: "AIzaSyDnbgO6QIUEDNsM7MSpo3qug8FBNlt5weg",
+  authDomain: "job-search-92565.firebaseapp.com",
+  databaseURL: "https://job-search-92565-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "job-search-92565",
+  storageBucket: "job-search-92565.firebasestorage.app",
+  messagingSenderId: "202940543641",
+  appId: "1:202940543641:web:7f8802aa7a08704540be08",
+  measurementId: "G-676RGLS7TW"
+};
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -333,3 +333,4 @@
 </script>
 </body>
 </html>
+
