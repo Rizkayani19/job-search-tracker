@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Job Search CRM</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --bg: #f4f7f6; --card: #ffffff; --text: #333; --border: #ddd; }
+        body.dark-theme { --bg: #1a1a1a; --card: #2d2d2d; --text: #eee; --border: #444; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 20px; transition: 0.3s; }
+        .container { max-width: 1000px; margin: auto; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .stats-grid { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 120px; padding: 15px; border-radius: 8px; text-align: center; background: var(--bg); border: 1px solid var(--border); }
+        .form-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        input, select, textarea { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); width: 100%; box-sizing: border-box; }
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-google { background: #4285F4; color: white; }
+        .btn-add { background: #28a745; color: white; width: 100%; margin: 10px 0; }
+        .btn-util { background: #6f42c1; color: white; font-size: 0.8em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .delete-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button class="btn" onclick="toggleDarkMode()">🌙 Theme</button>
+        <div id="authArea">
+            <button id="loginBtn" class="btn btn-google" onclick="login()">Login with Google</button>
+            <button id="logoutBtn" class="btn" style="display:none; background:#6c757d; color:white;" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <h2 style="text-align:center">Cloud Job CRM</h2>
+    <p id="userStatus" style="text-align:center; font-size:0.8em; color:#777;">Please login to sync data.</p>
+
+    <div class="stats-grid">
+        <div class="stat-card">Applied <br><strong id="countApplied" style="color:#007bff">0</strong></div>
+        <div class="stat-card">Interviews <br><strong id="countInterviewing" style="color:#ffc107">0</strong></div>
+        <div class="stat-card">Offers <br><strong id="countOffer" style="color:#28a745">0</strong></div>
+        <div class="stat-card">Avg Salary <br><strong id="avgSalary" style="color:#7b1fa2">$0</strong></div>
+    </div>
+
+    <div id="mainApp" style="opacity: 0.4; pointer-events: none;">
+        <div class="form-section">
+            <input type="text" id="company" placeholder="Company">
+            <input type="text" id="role" placeholder="Role">
+            <input type="date" id="dateApplied">
+            <input type="number" id="salary" placeholder="Salary ($)">
+            <select id="status">
+                <option value="Applied">Applied</option>
+                <option value="Interviewing">Interviewing</option>
+                <option value="Offer">Offer</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+            <textarea id="notes" placeholder="Notes & Links (Paste URLs here...)" style="grid-column: 1/-1;"></textarea>
+        </div>
+        <button class="btn btn-add" onclick="addJob()">Add Job to Cloud</button>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+            <input type="text" id="searchInput" placeholder="Search..." onkeyup="renderUI()" style="flex: 2;">
+            <select id="filterStatus" onchange="renderUI()" style="flex: 1;">
+                <option value="All">All Statuses</option>
+                <option value="Applied">Applied</option>
+                <option value="Interviewing">Interviewing</option>
+                <option value="Offer">Offer</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+            <button class="btn btn-util" onclick="checkReminders()">🔔 Reminders</button>
+            <button class="btn btn-util" style="background:#ff5722" onclick="launchPrep()">🚀 Launch Prep</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr><th>Date</th><th>Company</th><th>Role</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody id="jobList"></tbody>
+        </table>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // --- PASTE YOUR FIREBASE CONFIG HERE ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyDnbgO6QIUEDNsM7MSpo3qug8FBNlt5weg",
+  authDomain: "job-search-92565.firebaseapp.com",
+  databaseURL: "https://job-search-92565-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "job-search-92565",
+  storageBucket: "job-search-92565.firebasestorage.app",
+  messagingSenderId: "202940543641",
+  appId: "1:202940543641:web:7f8802aa7a08704540be08",
+  measurementId: "G-676RGLS7TW"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    const provider = new GoogleAuthProvider();
+    let jobs = [];
+    let userUID = null;
+
+    onAuthStateChanged(auth, (user) => {
+        const mainApp = document.getElementById('mainApp');
+        if (user) {
+            userUID = user.uid;
+            mainApp.style.opacity = "1";
+            mainApp.style.pointerEvents = "auto";
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'inline-block';
+            document.getElementById('userStatus').innerText = "Syncing: " + user.email;
+            onValue(ref(db, `users/${userUID}/jobs`), (snapshot) => {
+                const data = snapshot.val();
+                jobs = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
+                renderUI();
+            });
+        } else {
+            userUID = null;
+            mainApp.style.opacity = "0.4";
+            mainApp.style.pointerEvents = "none";
+            document.getElementById('loginBtn').style.display = 'inline-block';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('userStatus').innerText = "Please login to sync data.";
+            jobs = []; renderUI();
+        }
+    });
+
+    window.login = () => signInWithPopup(auth, provider);
+    window.logout = () => signOut(auth);
+
+    window.addJob = () => {
+        const company = document.getElementById('company').value;
+        const role = document.getElementById('role').value;
+        const status = document.getElementById('status').value;
+        const date = document.getElementById('dateApplied').value;
+        const salary = parseFloat(document.getElementById('salary').value) || 0;
+        const notes = document.getElementById('notes').value;
+
+        if (company && role && date) {
+            push(ref(db, `users/${userUID}/jobs`), { company, role, status, date, salary, notes });
+            document.querySelectorAll('input, textarea').forEach(i => i.value = '');
+            if(status === "Offer") triggerConfetti();
+        } else { alert("Fill in Company, Role, and Date!"); }
+    };
+
+    window.updateStatus = (id, newStatus) => {
+        update(ref(db, `users/${userUID}/jobs/${id}`), { status: newStatus });
+        if(newStatus === "Offer") triggerConfetti();
+    };
+
+    window.deleteJob = (id) => { if(confirm("Delete?")) remove(ref(db, `users/${userUID}/jobs/${id}`)); };
+
+    function triggerConfetti() {
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#28a745', '#ffc107', '#ffffff'] });
+    }
+
+    function linkify(text) {
+        const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        return text.replace(urlPattern, '<a href="$1" target="_blank" style="color:#007bff">Link 🔗</a>');
+    }
+
+    window.renderUI = () => {
+        const list = document.getElementById('jobList');
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const filter = document.getElementById('filterStatus').value;
+        list.innerHTML = '';
+        let stats = { Applied: 0, Interviewing: 0, Offer: 0, totalSalary: 0, sCount: 0 };
+
+        jobs.filter(j => {
+            const mS = j.company.toLowerCase().includes(search) || j.role.toLowerCase().includes(search);
+            const mF = (filter === "All" || j.status === filter);
+            return mS && mF;
+        }).forEach(job => {
+            if(stats.hasOwnProperty(job.status)) stats[job.status]++;
+            if(job.salary > 0) { stats.totalSalary += job.salary; stats.sCount++; }
+
+            const color = {Applied:'#007bff', Interviewing:'#ffc107', Offer:'#28a745', Rejected:'#dc3545'}[job.status] || '#666';
+            const diffDays = Math.floor((new Date() - new Date(job.date)) / (1000 * 3600 * 24));
+            const alert = (job.status === "Applied" && diffDays >= 7) ? `background:rgba(220,53,69,0.1); border-left:4px solid red;` : "";
+
+            list.innerHTML += `<tr style="${alert}">
+                <td>${job.date}</td>
+                <td>${job.company}<br><small>${linkify(job.notes || '')}</small></td>
+                <td>${job.role}</td>
+                <td>
+                    <select onchange="updateStatus('${job.id}', this.value)" style="color:${color}; font-weight:bold; border:none; background:transparent;">
+                        <option value="Applied" ${job.status==='Applied'?'selected':''}>Applied</option>
+                        <option value="Interviewing" ${job.status==='Interviewing'?'selected':''}>Interviewing</option>
+                        <option value="Offer" ${job.status==='Offer'?'selected':''}>Offer</option>
+                        <option value="Rejected" ${job.status==='Rejected'?'selected':''}>Rejected</option>
+                    </select>
+                </td>
+                <td><button class="delete-btn" onclick="deleteJob('${job.id}')">🗑️</button></td>
+            </tr>`;
+        });
+        document.getElementById('countApplied').innerText = stats.Applied;
+        document.getElementById('countInterviewing').innerText = stats.Interviewing;
+        document.getElementById('countOffer').innerText = stats.Offer;
+        document.getElementById('avgSalary').innerText = "$" + (stats.sCount > 0 ? Math.round(stats.totalSalary/stats.sCount).toLocaleString() : 0);
+    };
+
+    window.checkReminders = () => {
+        if (Notification.permission !== "granted") Notification.requestPermission();
+        const followUps = jobs.filter(j => j.status === "Applied" && (Math.floor((new Date() - new Date(j.date)) / 86400000) >= 7));
+        if (followUps.length > 0) {
+            followUps.forEach(j => new Notification("Follow-up Needed", { body: `Check in with ${j.company}!` }));
+        } else { alert("All caught up!"); }
+    };
+
+    window.launchPrep = () => {
+        const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        jobs.filter(j => j.status === "Interviewing" && j.notes).forEach(j => {
+            const links = j.notes.match(urlPattern);
+            if(links) links.forEach(url => window.open(url, '_blank'));
+        });
+    };
+
+    window.toggleDarkMode = () => {
+        const isDark = document.body.classList.toggle('dark-theme');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    };
+    if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
+</script>
+</body>
+</html>
