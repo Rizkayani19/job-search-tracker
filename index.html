@@ -85,7 +85,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+   // Change your existing import to this:
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     // --- PASTE YOUR FIREBASE CONFIG HERE ---
@@ -132,7 +133,8 @@
         }
     });
 
-    window.login = () => signInWithPopup(auth, provider);
+window.login = () => signInWithRedirect(auth, provider);
+    
     window.logout = () => signOut(auth);
 
     window.addJob = () => {
@@ -231,3 +233,4 @@
 </body>
 
 </html>
+
