@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +8,7 @@
     <style>
         :root { --bg: #f4f7f6; --card: #ffffff; --text: #333; --border: #ddd; }
         body.dark-theme { --bg: #1a1a1a; --card: #2d2d2d; --text: #eee; --border: #444; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 20px; transition: 0.3s; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 20px; transition: 0.3s; padding-bottom: 50px; }
         .container { max-width: 1000px; margin: auto; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .stats-grid { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .stat-card { flex: 1; min-width: 120px; padding: 15px; border-radius: 8px; text-align: center; background: var(--bg); border: 1px solid var(--border); }
@@ -18,10 +17,12 @@
         .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-google { background: #4285F4; color: white; }
         .btn-add { background: #28a745; color: white; width: 100%; margin: 10px 0; }
-        .btn-util { background: #6f42c1; color: white; font-size: 0.8em; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .btn-util { background: #6f42c1; color: white; font-size: 0.8em; padding: 8px 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        .delete-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; }
+        .delete-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; margin-left: 5px; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-top: 5px; cursor: pointer; }
+        @media (max-width: 600px) { th:nth-child(1), td:nth-child(1) { display: none; } }
     </style>
 </head>
 <body>
@@ -57,11 +58,15 @@
                 <option value="Offer">Offer</option>
                 <option value="Rejected">Rejected</option>
             </select>
-            <textarea id="notes" placeholder="Notes & Links (Paste URLs here...)" style="grid-column: 1/-1;"></textarea>
+            <div style="grid-column: 1/-1;">
+                <label style="font-size: 0.8em; display: block; margin-bottom: 5px;">Upload Resume (PDF/Word):</label>
+                <input type="file" id="resumeFile" accept=".pdf,.doc,.docx">
+            </div>
+            <textarea id="notes" placeholder="Notes & Links (Paste URLs here...)" style="grid-column: 1/-1; height: 80px;"></textarea>
         </div>
         <button class="btn btn-add" onclick="addJob()">Add Job to Cloud</button>
 
-        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; align-items: center;">
             <input type="text" id="searchInput" placeholder="Search..." onkeyup="renderUI()" style="flex: 2;">
             <select id="filterStatus" onchange="renderUI()" style="flex: 1;">
                 <option value="All">All Statuses</option>
@@ -71,12 +76,12 @@
                 <option value="Rejected">Rejected</option>
             </select>
             <button class="btn btn-util" onclick="checkReminders()">🔔 Reminders</button>
-            <button class="btn btn-util" style="background:#ff5722" onclick="launchPrep()">🚀 Launch Prep</button>
+            <button class="btn btn-util" style="background:#207245" onclick="exportToCSV()">📊 Export CSV</button>
         </div>
 
         <table>
             <thead>
-                <tr><th>Date</th><th>Company</th><th>Role</th><th>Status</th><th>Action</th></tr>
+                <tr><th>Date</th><th>Company Info</th><th>Role</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody id="jobList"></tbody>
         </table>
@@ -85,21 +90,19 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-   // Change your existing import to this:
-import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // --- PASTE YOUR FIREBASE CONFIG HERE ---
     const firebaseConfig = {
-  apiKey: "AIzaSyDnbgO6QIUEDNsM7MSpo3qug8FBNlt5weg",
-  authDomain: "job-search-92565.firebaseapp.com",
-  databaseURL: "https://job-search-92565-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "job-search-92565",
-  storageBucket: "job-search-92565.firebasestorage.app",
-  messagingSenderId: "202940543641",
-  appId: "1:202940543641:web:7f8802aa7a08704540be08",
-  measurementId: "G-676RGLS7TW"
-};
+        apiKey: "AIzaSyDnbgO6QIUEDNsM7MSpo3qug8FBNlt5weg",
+        authDomain: "job-search-92565.firebaseapp.com",
+        databaseURL: "https://job-search-92565-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "job-search-92565",
+        storageBucket: "job-search-92565.firebasestorage.app",
+        messagingSenderId: "202940543641",
+        appId: "1:202940543641:web:7f8802aa7a08704540be08",
+        measurementId: "G-676RGLS7TW"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -133,8 +136,9 @@ import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, Google
         }
     });
 
-window.login = () => signInWithRedirect(auth, provider);
-    
+    getRedirectResult(auth).catch(e => console.error("Login Error", e));
+
+    window.login = () => signInWithRedirect(auth, provider);
     window.logout = () => signOut(auth);
 
     window.addJob = () => {
@@ -144,11 +148,20 @@ window.login = () => signInWithRedirect(auth, provider);
         const date = document.getElementById('dateApplied').value;
         const salary = parseFloat(document.getElementById('salary').value) || 0;
         const notes = document.getElementById('notes').value;
+        const fileInput = document.getElementById('resumeFile');
 
         if (company && role && date) {
-            push(ref(db, `users/${userUID}/jobs`), { company, role, status, date, salary, notes });
-            document.querySelectorAll('input, textarea').forEach(i => i.value = '');
-            if(status === "Offer") triggerConfetti();
+            const save = (resumeBase64 = "") => {
+                push(ref(db, `users/${userUID}/jobs`), { company, role, status, date, salary, notes, resume: resumeBase64 });
+                document.querySelectorAll('input, textarea').forEach(i => i.value = '');
+                if(status === "Offer") triggerConfetti();
+            };
+
+            if (fileInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = (e) => save(e.target.result);
+                reader.readAsDataURL(fileInput.files[0]);
+            } else { save(); }
         } else { alert("Fill in Company, Role, and Date!"); }
     };
 
@@ -157,10 +170,37 @@ window.login = () => signInWithRedirect(auth, provider);
         if(newStatus === "Offer") triggerConfetti();
     };
 
-    window.deleteJob = (id) => { if(confirm("Delete?")) remove(ref(db, `users/${userUID}/jobs/${id}`)); };
+    window.deleteJob = (id) => { if(confirm("Delete this job entry?")) remove(ref(db, `users/${userUID}/jobs/${id}`)); };
+
+    window.researchCompany = (name) => {
+        const query = encodeURIComponent(name);
+        window.open(`https://www.google.com/search?q=${query}+news&tbm=nws`, '_blank');
+        window.open(`https://www.linkedin.com/search/results/all/?keywords=${query}`, '_blank');
+    };
+
+    window.shareJob = (company, role, notes) => {
+        const text = `Job: ${role} at ${company}\nNotes: ${notes}`;
+        if (navigator.share) navigator.share({ title: 'Job Details', text: text }).catch(console.error);
+        else alert(text);
+    };
+
+    window.sendFollowUp = (company, role) => {
+        const subject = encodeURIComponent(`Follow-up: ${role} application`);
+        const body = encodeURIComponent(`Hi ${company} Team,\n\nI'm following up on my application for ${role}. Looking forward to hearing from you!`);
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    };
+
+    window.exportToCSV = () => {
+        let csv = "Date,Company,Role,Status,Salary,Notes\n";
+        jobs.forEach(j => csv += `${j.date},${j.company},${j.role},${j.status},${j.salary},"${(j.notes||'').replace(/"/g,'')}"\n`);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'MyJobs.csv'; a.click();
+    };
 
     function triggerConfetti() {
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#28a745', '#ffc107', '#ffffff'] });
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     }
 
     function linkify(text) {
@@ -184,12 +224,23 @@ window.login = () => signInWithRedirect(auth, provider);
             if(job.salary > 0) { stats.totalSalary += job.salary; stats.sCount++; }
 
             const color = {Applied:'#007bff', Interviewing:'#ffc107', Offer:'#28a745', Rejected:'#dc3545'}[job.status] || '#666';
-            const diffDays = Math.floor((new Date() - new Date(job.date)) / (1000 * 3600 * 24));
-            const alert = (job.status === "Applied" && diffDays >= 7) ? `background:rgba(220,53,69,0.1); border-left:4px solid red;` : "";
+            const diffDays = Math.floor((new Date() - new Date(job.date)) / 86400000);
+            
+            let badge = "";
+            if (job.status === "Applied") {
+                if (diffDays >= 7) badge = `<span class="badge" style="background:#dc3545; color:white;" onclick="sendFollowUp('${job.company}','${job.role}')">⚠️ 7d+ Email Now</span>`;
+                else if (diffDays >= 3) badge = `<span class="badge" style="background:#ffc107;" onclick="sendFollowUp('${job.company}','${job.role}')">⏳ 3d Follow-up</span>`;
+            }
 
-            list.innerHTML += `<tr style="${alert}">
+            const resumeHtml = job.resume ? `<br><a href="${job.resume}" target="_blank" style="font-size:0.8em; color:#28a745; text-decoration:none;">📄 Resume</a>` : "";
+
+            list.innerHTML += `<tr>
                 <td>${job.date}</td>
-                <td>${job.company}<br><small>${linkify(job.notes || '')}</small></td>
+                <td>
+                    <strong>${job.company}</strong> <span onclick="researchCompany('${job.company}')" style="cursor:pointer; font-size:0.8em;">🔍</span>
+                    ${resumeHtml} ${badge}
+                    <br><small>${linkify(job.notes || '')}</small>
+                </td>
                 <td>${job.role}</td>
                 <td>
                     <select onchange="updateStatus('${job.id}', this.value)" style="color:${color}; font-weight:bold; border:none; background:transparent;">
@@ -199,7 +250,10 @@ window.login = () => signInWithRedirect(auth, provider);
                         <option value="Rejected" ${job.status==='Rejected'?'selected':''}>Rejected</option>
                     </select>
                 </td>
-                <td><button class="delete-btn" onclick="deleteJob('${job.id}')">🗑️</button></td>
+                <td>
+                    <button class="delete-btn" onclick="shareJob('${job.company}','${job.role}','${(job.notes||'').substring(0,20)}')">📤</button>
+                    <button class="delete-btn" onclick="deleteJob('${job.id}')">🗑️</button>
+                </td>
             </tr>`;
         });
         document.getElementById('countApplied').innerText = stats.Applied;
@@ -209,19 +263,8 @@ window.login = () => signInWithRedirect(auth, provider);
     };
 
     window.checkReminders = () => {
-        if (Notification.permission !== "granted") Notification.requestPermission();
         const followUps = jobs.filter(j => j.status === "Applied" && (Math.floor((new Date() - new Date(j.date)) / 86400000) >= 7));
-        if (followUps.length > 0) {
-            followUps.forEach(j => new Notification("Follow-up Needed", { body: `Check in with ${j.company}!` }));
-        } else { alert("All caught up!"); }
-    };
-
-    window.launchPrep = () => {
-        const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-        jobs.filter(j => j.status === "Interviewing" && j.notes).forEach(j => {
-            const links = j.notes.match(urlPattern);
-            if(links) links.forEach(url => window.open(url, '_blank'));
-        });
+        alert(followUps.length > 0 ? `You have ${followUps.length} jobs to follow up on!` : "All caught up!");
     };
 
     window.toggleDarkMode = () => {
@@ -231,6 +274,4 @@ window.login = () => signInWithRedirect(auth, provider);
     if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
 </script>
 </body>
-
 </html>
-
