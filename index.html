@@ -3,28 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Job Search CRM</title>
+    <title>AI-Strategy Job CRM</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        :root { --bg: #f4f7f6; --card: #ffffff; --text: #333; --border: #ddd; }
+        :root { --bg: #f4f7f6; --card: #ffffff; --text: #333; --border: #ddd; --accent: #0077b5; } /* LinkedIn Blue */
         body.dark-theme { --bg: #1a1a1a; --card: #2d2d2d; --text: #eee; --border: #444; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 20px; transition: 0.3s; padding-bottom: 50px; }
-        .container { max-width: 1000px; margin: auto; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .container { max-width: 1200px; margin: auto; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .stats-grid { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .stat-card { flex: 1; min-width: 120px; padding: 15px; border-radius: 8px; text-align: center; background: var(--bg); border: 1px solid var(--border); }
-        .form-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .form-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
         input, select, textarea { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); width: 100%; box-sizing: border-box; }
         .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-google { background: #4285F4; color: white; }
         .btn-add { background: #28a745; color: white; width: 100%; margin: 10px 0; }
-        .btn-update { background: #007bff; color: white; width: 100%; margin: 10px 0; display: none; }
+        .btn-update { background: var(--accent); color: white; width: 100%; margin: 10px 0; display: none; }
         .btn-util { background: #6f42c1; color: white; font-size: 0.8em; padding: 8px 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85em; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
         .action-btns { display: flex; gap: 5px; }
         .delete-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; }
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-top: 5px; cursor: pointer; }
-        @media (max-width: 600px) { th:nth-child(1), td:nth-child(1) { display: none; } }
+        .score-pill { padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 0.8em; color: white; }
+        .li-badge { background: var(--accent); color: white; padding: 2px 5px; border-radius: 4px; font-size: 0.7em; margin-left: 5px; }
+        @media (max-width: 850px) { .hide-mobile { display: none; } }
     </style>
 </head>
 <body>
@@ -38,55 +39,64 @@
         </div>
     </div>
     
-    <h2 style="text-align:center">Cloud Job CRM</h2>
+    <h2 style="text-align:center">AI-Strategy Job Search CRM</h2>
     <p id="userStatus" style="text-align:center; font-size:0.8em; color:#777;">Please login to sync data.</p>
 
     <div class="stats-grid">
         <div class="stat-card">Applied <br><strong id="countApplied" style="color:#007bff">0</strong></div>
         <div class="stat-card">Interviews <br><strong id="countInterviewing" style="color:#ffc107">0</strong></div>
-        <div class="stat-card">Offers <br><strong id="countOffer" style="color:#28a745">0</strong></div>
-        <div class="stat-card">Avg Salary <br><strong id="avgSalary" style="color:#7b1fa2">$0</strong></div>
+        <div class="stat-card">Avg Match <br><strong id="avgMatch" style="color:#28a745">0%</strong></div>
+        <div class="stat-card">Offers <br><strong id="countOffer" style="color:#7b1fa2">0</strong></div>
     </div>
 
     <div id="mainApp" style="opacity: 0.4; pointer-events: none;">
         <div class="form-section">
-            <input type="text" id="company" placeholder="Company">
-            <input type="text" id="role" placeholder="Role">
-            <input type="date" id="dateApplied">
-            <input type="number" id="salary" placeholder="Salary (Rs)">
-            <select id="status">
-                <option value="Applied">Applied</option>
-                <option value="Interviewing">Interviewing</option>
-                <option value="Offer">Offer</option>
-                <option value="Rejected">Rejected</option>
+            <input type="text" id="company" placeholder="Company Name">
+            <input type="text" id="role" placeholder="Role Title">
+            <select id="liMode">
+                <option value="Manual">LinkedIn (Manual)</option>
+                <option value="Easy">LinkedIn (Easy Apply)</option>
+                <option value="Direct">Company Website</option>
             </select>
-            <div style="grid-column: 1/-1;">
-                <label style="font-size: 0.8em; display: block; margin-bottom: 5px;">Upload Resume (PDF/Word):</label>
-                <input type="file" id="resumeFile" accept=".pdf,.doc,.docx">
+            <input type="text" id="recruiter" placeholder="Recruiter/Contact Name">
+            <div style="display: flex; align-items: center; gap: 10px; background: var(--bg); padding: 5px; border-radius: 6px;">
+                <label style="font-size: 0.7em; white-space: nowrap;">AI Match %:</label>
+                <input type="range" id="matchScore" min="0" max="100" value="70" oninput="this.nextElementSibling.value = this.value + '%'">
+                <output style="font-size: 0.8em; font-weight: bold;">70%</output>
             </div>
-            <textarea id="notes" placeholder="Notes & Links (Paste URLs here...)" style="grid-column: 1/-1; height: 80px;"></textarea>
+            <input type="date" id="dateApplied">
+            
+            <div style="grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label style="font-size: 0.75em; color: #666;">Interview Date:</label>
+                    <input type="datetime-local" id="interviewDate">
+                </div>
+                <div>
+                    <label style="font-size: 0.75em; color: #666;">Resume Version:</label>
+                    <input type="file" id="resumeFile" accept=".pdf,.doc,.docx">
+                </div>
+            </div>
+            <textarea id="notes" placeholder="Paste Job Description Link here..." style="height: 50px;"></textarea>
+            <textarea id="remarks" placeholder="AI Feedback: Missing keywords? Interview tips?" style="height: 50px;"></textarea>
         </div>
         
         <button id="addBtn" class="btn btn-add" onclick="addJob()">Add Job to Cloud</button>
-        <button id="updateBtn" class="btn btn-update" onclick="submitUpdate()">Update Job Details</button>
+        <button id="updateBtn" class="btn btn-update" onclick="submitUpdate()">Update Strategy Details</button>
         <button id="cancelBtn" class="btn" style="display:none; width:100%; margin-top:5px;" onclick="resetForm()">Cancel Edit</button>
 
         <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; align-items: center;">
-            <input type="text" id="searchInput" placeholder="Search..." onkeyup="renderUI()" style="flex: 2;">
+            <input type="text" id="searchInput" placeholder="Search Role or Recruiter..." onkeyup="renderUI()" style="flex: 2;">
             <select id="filterStatus" onchange="renderUI()" style="flex: 1;">
-                <option value="All">All Statuses</option>
-                <option value="Applied">Applied</option>
-                <option value="Interviewing">Interviewing</option>
-                <option value="Offer">Offer</option>
-                <option value="Rejected">Rejected</option>
+                <option value="Active">Active Search</option>
+                <option value="All">All History</option>
+                <option value="Rejected">Rejected/Archived</option>
             </select>
-            <button class="btn btn-util" onclick="checkReminders()">🔔 Reminders</button>
-            <button class="btn btn-util" style="background:#207245" onclick="exportToCSV()">📊 Export CSV</button>
+            <button class="btn btn-util" onclick="exportToCSV()">📊 Export for Review</button>
         </div>
 
         <table>
             <thead>
-                <tr><th>Date</th><th>Company Info</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Date</th><th>Target</th><th>Role</th><th>Match</th><th>Status</th><th>Next Steps</th><th>Actions</th></tr>
             </thead>
             <tbody id="jobList"></tbody>
         </table>
@@ -117,12 +127,8 @@
     let userUID = null;
     let editingID = null;
 
-    // LOGIN FUNCTION (SWITCHED TO POPUP FOR STABILITY)
-    window.login = () => {
-        signInWithPopup(auth, provider)
-            .then((result) => { console.log("User:", result.user.email); })
-            .catch((error) => { alert("Error: " + error.message); });
-    };
+    window.login = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
+    window.logout = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
         const mainApp = document.getElementById('mainApp');
@@ -132,7 +138,7 @@
             mainApp.style.pointerEvents = "auto";
             document.getElementById('loginBtn').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'inline-block';
-            document.getElementById('userStatus').innerText = "Syncing: " + user.email;
+            document.getElementById('userStatus').innerText = "Strategic Sync: " + user.email;
             onValue(ref(db, `users/${userUID}/jobs`), (snapshot) => {
                 const data = snapshot.val();
                 jobs = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
@@ -144,47 +150,54 @@
             mainApp.style.pointerEvents = "none";
             document.getElementById('loginBtn').style.display = 'inline-block';
             document.getElementById('logoutBtn').style.display = 'none';
-            document.getElementById('userStatus').innerText = "Please login to sync data.";
+            document.getElementById('userStatus').innerText = "Please login to start strategy.";
             jobs = []; renderUI();
         }
     });
 
-    window.logout = () => signOut(auth);
-
     window.addJob = () => {
         const company = document.getElementById('company').value;
         const role = document.getElementById('role').value;
-        const status = document.getElementById('status').value;
-        const date = document.getElementById('dateApplied').value;
-        const salary = parseFloat(document.getElementById('salary').value) || 0;
-        const notes = document.getElementById('notes').value;
-        const fileInput = document.getElementById('resumeFile');
-        const lastUpdated = new Date().toLocaleString();
-
-        if (company && role && date) {
+        if (company && role) {
             const save = (resumeBase64 = "") => {
-                push(ref(db, `users/${userUID}/jobs`), { company, role, status, date, salary, notes, resume: resumeBase64, lastUpdated });
+                push(ref(db, `users/${userUID}/jobs`), {
+                    company, role,
+                    liMode: document.getElementById('liMode').value,
+                    recruiter: document.getElementById('recruiter').value,
+                    matchScore: parseInt(document.getElementById('matchScore').value),
+                    date: document.getElementById('dateApplied').value || new Date().toISOString().split('T')[0],
+                    interviewDate: document.getElementById('interviewDate').value || "",
+                    notes: document.getElementById('notes').value,
+                    remarks: document.getElementById('remarks').value,
+                    status: "Applied",
+                    resume: resumeBase64,
+                    lastUpdated: new Date().toLocaleString()
+                });
                 resetForm();
-                if(status === "Offer") triggerConfetti();
             };
-            if (fileInput.files.length > 0) {
+            const file = document.getElementById('resumeFile').files[0];
+            if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => save(e.target.result);
-                reader.readAsDataURL(fileInput.files[0]);
+                reader.readAsDataURL(file);
             } else { save(); }
-        } else { alert("Fill in Company, Role, and Date!"); }
+        } else { alert("Company and Role required!"); }
     };
 
     window.editJob = (id) => {
-        const job = jobs.find(j => j.id === id);
-        if (!job) return;
+        const j = jobs.find(job => job.id === id);
         editingID = id;
-        document.getElementById('company').value = job.company;
-        document.getElementById('role').value = job.role;
-        document.getElementById('dateApplied').value = job.date;
-        document.getElementById('salary').value = job.salary;
-        document.getElementById('status').value = job.status;
-        document.getElementById('notes').value = job.notes || "";
+        document.getElementById('company').value = j.company;
+        document.getElementById('role').value = j.role;
+        document.getElementById('liMode').value = j.liMode || "Manual";
+        document.getElementById('recruiter').value = j.recruiter || "";
+        document.getElementById('matchScore').value = j.matchScore || 70;
+        document.querySelector('output').innerText = (j.matchScore || 70) + "%";
+        document.getElementById('dateApplied').value = j.date;
+        document.getElementById('interviewDate').value = j.interviewDate || "";
+        document.getElementById('notes').value = j.notes || "";
+        document.getElementById('remarks').value = j.remarks || "";
+        
         document.getElementById('addBtn').style.display = 'none';
         document.getElementById('updateBtn').style.display = 'block';
         document.getElementById('cancelBtn').style.display = 'block';
@@ -192,27 +205,20 @@
     };
 
     window.submitUpdate = () => {
-        const company = document.getElementById('company').value;
-        const role = document.getElementById('role').value;
-        const status = document.getElementById('status').value;
-        const date = document.getElementById('dateApplied').value;
-        const salary = parseFloat(document.getElementById('salary').value) || 0;
-        const notes = document.getElementById('notes').value;
-        const lastUpdated = new Date().toLocaleString();
-        const fileInput = document.getElementById('resumeFile');
-        
-        const updateData = { company, role, status, date, salary, notes, lastUpdated };
-        const finalizeUpdate = (resumeBase64 = null) => {
-            if (resumeBase64) updateData.resume = resumeBase64;
-            update(ref(db, `users/${userUID}/jobs/${editingID}`), updateData);
-            resetForm();
+        const updateData = {
+            company: document.getElementById('company').value,
+            role: document.getElementById('role').value,
+            liMode: document.getElementById('liMode').value,
+            recruiter: document.getElementById('recruiter').value,
+            matchScore: parseInt(document.getElementById('matchScore').value),
+            date: document.getElementById('dateApplied').value,
+            interviewDate: document.getElementById('interviewDate').value,
+            notes: document.getElementById('notes').value,
+            remarks: document.getElementById('remarks').value,
+            lastUpdated: new Date().toLocaleString()
         };
-
-        if (fileInput.files.length > 0) {
-            const reader = new FileReader();
-            reader.onload = (e) => finalizeUpdate(e.target.result);
-            reader.readAsDataURL(fileInput.files[0]);
-        } else { finalizeUpdate(); }
+        update(ref(db, `users/${userUID}/jobs/${editingID}`), updateData);
+        resetForm();
     };
 
     window.resetForm = () => {
@@ -225,82 +231,59 @@
 
     window.updateStatus = (id, newStatus) => {
         update(ref(db, `users/${userUID}/jobs/${id}`), { status: newStatus, lastUpdated: new Date().toLocaleString() });
-        if(newStatus === "Offer") triggerConfetti();
+        if(newStatus === "Offer") confetti({ particleCount: 150, spread: 70 });
     };
 
-    window.deleteJob = (id) => { if(confirm("Delete this job entry?")) remove(ref(db, `users/${userUID}/jobs/${id}`)); };
-
-    window.researchCompany = (name) => {
-        const query = encodeURIComponent(name);
-        window.open(`https://www.google.com/search?q=${query}+news&tbm=nws`, '_blank');
-        window.open(`https://www.linkedin.com/search/results/all/?keywords=${query}`, '_blank');
-    };
+    window.deleteJob = (id) => { if(confirm("Delete entry?")) remove(ref(db, `users/${userUID}/jobs/${id}`)); };
 
     window.exportToCSV = () => {
-        let csv = "Date,Company,Role,Status,Salary,LastUpdated\n";
-        jobs.forEach(j => csv += `${j.date},${j.company},${j.role},${j.status},${j.salary},${j.lastUpdated}\n`);
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'MyJobs.csv'; a.click();
+        let csv = "Date,Company,Role,Match%,Type,Recruiter,Remarks\n";
+        jobs.forEach(j => csv += `${j.date},${j.company},${j.role},${j.matchScore}%,${j.liMode},${j.recruiter},"${(j.remarks||'').replace(/"/g,'')}"\n`);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'Strategy_Report.csv'; a.click();
     };
-
-    function triggerConfetti() { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); }
 
     window.renderUI = () => {
         const list = document.getElementById('jobList');
-        const search = document.getElementById('searchInput').value.toLowerCase();
         const filter = document.getElementById('filterStatus').value;
+        const search = document.getElementById('searchInput').value.toLowerCase();
         list.innerHTML = '';
-        let stats = { Applied: 0, Interviewing: 0, Offer: 0, totalSalary: 0, sCount: 0 };
+        let stats = { Applied: 0, Interviewing: 0, Offer: 0, totalMatch: 0, countMatch: 0 };
 
         jobs.filter(j => {
-            const mS = j.company.toLowerCase().includes(search) || j.role.toLowerCase().includes(search);
-            const mF = (filter === "All" || j.status === filter);
+            const mS = j.company.toLowerCase().includes(search) || j.role.toLowerCase().includes(search) || (j.recruiter||'').toLowerCase().includes(search);
+            let mF = (filter === "Active") ? j.status !== "Rejected" : (filter === "All") ? true : (j.status === "Rejected");
             return mS && mF;
-        }).sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(job => {
-            if(stats.hasOwnProperty(job.status)) stats[job.status]++;
-            if(job.salary > 0) { stats.totalSalary += job.salary; stats.sCount++; }
-            const color = {Applied:'#007bff', Interviewing:'#ffc107', Offer:'#28a745', Rejected:'#dc3545'}[job.status] || '#666';
-            const diffDays = Math.floor((new Date() - new Date(job.date)) / 86400000);
+        }).forEach(j => {
+            if(stats.hasOwnProperty(j.status)) stats[j.status]++;
+            if(j.matchScore) { stats.totalMatch += j.matchScore; stats.countMatch++; }
             
-            let badge = "";
-            if (job.status === "Applied") {
-                if (diffDays >= 7) badge = `<span class="badge" style="background:#dc3545; color:white;">⚠️ 7d+ Old</span>`;
-                else if (diffDays >= 3) badge = `<span class="badge" style="background:#ffc107;">⏳ 3d Old</span>`;
-            }
-
-            const resumeHtml = job.resume ? `<br><a href="${job.resume}" target="_blank" style="font-size:0.8em; color:#28a745; text-decoration:none;">📄 Resume</a>` : "";
+            const scoreColor = j.matchScore > 85 ? '#28a745' : j.matchScore > 65 ? '#ffc107' : '#dc3545';
+            const intDate = j.interviewDate ? new Date(j.interviewDate).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit'}) : 'None';
 
             list.innerHTML += `<tr>
-                <td>${job.date}</td>
+                <td>${j.date}</td>
+                <td><strong>${j.company}</strong><br><small>${j.liMode}</small></td>
+                <td>${j.role}<br><span class="li-badge">${j.recruiter || 'No Contact'}</span></td>
+                <td><span class="score-pill" style="background:${scoreColor}">${j.matchScore}%</span></td>
                 <td>
-                    <strong>${job.company}</strong> <span onclick="researchCompany('${job.company}')" style="cursor:pointer; font-size:0.8em;">🔍</span>
-                    ${resumeHtml} ${badge}
-                    <div style="font-size:0.7em; color:#888;">Updated: ${job.lastUpdated || 'Initial'}</div>
-                </td>
-                <td>${job.role}</td>
-                <td>
-                    <select onchange="updateStatus('${job.id}', this.value)" style="color:${color}; font-weight:bold; border:none; background:transparent;">
-                        <option value="Applied" ${job.status==='Applied'?'selected':''}>Applied</option>
-                        <option value="Interviewing" ${job.status==='Interviewing'?'selected':''}>Interviewing</option>
-                        <option value="Offer" ${job.status==='Offer'?'selected':''}>Offer</option>
-                        <option value="Rejected" ${job.status==='Rejected'?'selected':''}>Rejected</option>
+                    <select onchange="updateStatus('${j.id}', this.value)" style="border:none; background:transparent; font-weight:bold;">
+                        <option value="Applied" ${j.status==='Applied'?'selected':''}>Applied</option>
+                        <option value="Interviewing" ${j.status==='Interviewing'?'selected':''}>Interviewing</option>
+                        <option value="Offer" ${j.status==='Offer'?'selected':''}>Offer</option>
+                        <option value="Rejected" ${j.status==='Rejected'?'selected':''}>Rejected</option>
                     </select>
                 </td>
-                <td class="action-btns">
-                    <button class="delete-btn" onclick="editJob('${job.id}')" title="Edit">✏️</button>
-                    <button class="delete-btn" onclick="deleteJob('${job.id}')" title="Delete">🗑️</button>
+                <td><small>Int: ${intDate}</small><br><small>${(j.remarks||'').substring(0,30)}...</small></td>
+                <td>
+                    <button class="delete-btn" onclick="editJob('${j.id}')">✏️</button>
+                    <button class="delete-btn" onclick="deleteJob('${j.id}')">🗑️</button>
                 </td>
             </tr>`;
         });
         document.getElementById('countApplied').innerText = stats.Applied;
         document.getElementById('countInterviewing').innerText = stats.Interviewing;
         document.getElementById('countOffer').innerText = stats.Offer;
-        document.getElementById('avgSalary').innerText = "$" + (stats.sCount > 0 ? Math.round(stats.totalSalary/stats.sCount).toLocaleString() : 0);
-    };
-
-    window.checkReminders = () => {
-        const followUps = jobs.filter(j => j.status === "Applied" && (Math.floor((new Date() - new Date(j.date)) / 86400000) >= 7));
-        alert(followUps.length > 0 ? `Check ${followUps.length} stale applications!` : "All caught up!");
+        document.getElementById('avgMatch').innerText = (stats.countMatch > 0 ? Math.round(stats.totalMatch/stats.countMatch) : 0) + "%";
     };
 
     window.toggleDarkMode = () => {
@@ -311,4 +294,3 @@
 </script>
 </body>
 </html>
-
