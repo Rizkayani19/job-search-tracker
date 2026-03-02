@@ -1,1 +1,1 @@
-Job search tracker application
+Job search tracker application made with html and css
