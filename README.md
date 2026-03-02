@@ -31,4 +31,4 @@ A full-stack, serverless web application designed to automate and organize the j
 4. **Action:** Use the "Research" or "Email" buttons to stay ahead of the competition.
 
 ---
-*Created by [Your Name]*
+*Created by **Muhammad Rizwan**
