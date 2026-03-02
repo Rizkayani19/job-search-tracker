@@ -22,7 +22,7 @@ A full-stack, serverless web application designed to automate and organize the j
 - **Deployment:** GitHub Pages
 
 ## 📸 Screenshots
-*(Optional: You can add an image link here later!)*
+<img width="1311" height="735" alt="image" src="https://github.com/user-attachments/assets/74098e87-b34b-4bbf-b01b-9cd279997aa4" />
 
 ## 💡 How to Use
 1. **Login:** Use your Google account to unlock your private cloud database.
